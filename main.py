@@ -158,7 +158,7 @@ class NeuralCellularAutomata(nn.Module):
             self.optimizer.step()
             outputs = outputs.cpu().detach()
             if i % monitoring_interval == 0:
-                plot_images(torch.clamp(outputs[:, :, :, :4], min=-0.5, max=0.5), self.writer, generate_filename(i))
+                plot_images(torch.clamp(outputs[:, :, :, :4], min=-0, max=1), self.writer, generate_filename(i))
             for idx, output in zip(idxs, outputs):
                 pool[idx] = output.cpu().detach()
                 del output
