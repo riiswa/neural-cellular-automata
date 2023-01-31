@@ -168,6 +168,7 @@ class NeuralCellularAutomata(nn.Module):
 
 if __name__ == "__main__":
     nca = NeuralCellularAutomata()
-    image_url = "https://static.vecteezy.com/system/resources/previews/003/240/508/original/beautiful-purple-daisy-flower-isolated-on-white-background-vector.jpg"
+    #image_url = "https://static.vecteezy.com/system/resources/previews/003/240/508/original/beautiful-purple-daisy-flower-isolated-on-white-background-vector.jpg"
+    image_url = "https://em-content.zobj.net/thumbs/240/apple/325/cherry-blossom_1f338.png"
     nca.pool_training(load_image_from_url(image_url))
     nca.save()
