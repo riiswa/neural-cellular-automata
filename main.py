@@ -104,6 +104,7 @@ class NeuralCellularAutomata(nn.Module):
 
         self.loss_fn = nn.MSELoss().to(self.device)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=2e-3)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.5)
         self.to(self.device)
 
     def save(self):
@@ -156,6 +157,7 @@ class NeuralCellularAutomata(nn.Module):
             self.writer.add_scalar("Loss", loss.item(), i)
 
             self.optimizer.step()
+            self.scheduler.step()
             outputs = outputs.cpu().detach()
             if i % monitoring_interval == 0:
                 plot_images(torch.clamp(outputs[:, :, :, :4], min=-0, max=1), self.writer, i, generate_filename(i))
