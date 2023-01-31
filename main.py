@@ -20,7 +20,7 @@ def load_image_from_url(url, size=64):
     return img_tensor / 255
 
 
-def plot_images(images, writer, filename, rows=None, cols=None, figsize=None):  # Written by ChatGPT
+def plot_images(images, writer, step, filename, rows=None, cols=None, figsize=None):  # Written by ChatGPT
     """
     Plot a batch of images in a grid.
 
@@ -47,7 +47,7 @@ def plot_images(images, writer, filename, rows=None, cols=None, figsize=None):  
             ax.imshow(images[i])
         ax.axis("off")
     plt.tight_layout()
-    writer.add_figure("Batch images", fig)
+    writer.add_figure("Batch images", fig, step)
     plt.savefig(filename)
     plt.close()
 
@@ -158,7 +158,7 @@ class NeuralCellularAutomata(nn.Module):
             self.optimizer.step()
             outputs = outputs.cpu().detach()
             if i % monitoring_interval == 0:
-                plot_images(torch.clamp(outputs[:, :, :, :4], min=-0, max=1), self.writer, generate_filename(i))
+                plot_images(torch.clamp(outputs[:, :, :, :4], min=-0, max=1), self.writer, generate_filename(i), step)
             for idx, output in zip(idxs, outputs):
                 pool[idx] = output.cpu().detach()
                 del output
