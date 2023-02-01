@@ -9,6 +9,7 @@ import random
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import os
+from torchmetrics import StructuralSimilarityIndexMeasure
 
 
 def load_image_from_url(url, size=64):
@@ -102,7 +103,7 @@ class NeuralCellularAutomata(nn.Module):
         self.dense2 = nn.Linear(128, 16)
         self.dense2.weight.data.zero_()
 
-        self.loss_fn = nn.MSELoss().to(self.device)
+        self.loss_fn = StructuralSimilarityIndexMeasure(data_range=1.0).to(self.device)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=2e-3)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.5)
         self.to(self.device)
@@ -145,14 +146,17 @@ class NeuralCellularAutomata(nn.Module):
             idxs, batch = sample()
             with torch.no_grad():
                 max_idx = max(range(batch_size),
-                              key=lambda i: self.loss_fn(batch[i][:, :, :4].to(self.device), target.to(self.device)))
+                              key=lambda x: self.loss_fn(
+                                  batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).to(self.device),
+                                  target.transpose(0, 2).unsqueeze(0).to(self.device))
+                              )
             batch[max_idx] = seed.clone()
 
             self.optimizer.zero_grad()
             state_grids = torch.stack(batch)
             outputs = self.update(state_grids.to(self.device))
             del state_grids
-            loss = self.loss_fn(outputs[:, :, :, :4], targets)
+            loss = self.loss_fn(outputs[:, :, :, :4].transpose(1, 3), targets.transpose(1, 3))
             loss.backward(retain_graph=True)
             self.writer.add_scalar("Loss", loss.item(), i)
 
@@ -168,7 +172,7 @@ class NeuralCellularAutomata(nn.Module):
 
 if __name__ == "__main__":
     nca = NeuralCellularAutomata()
-    #image_url = "https://static.vecteezy.com/system/resources/previews/003/240/508/original/beautiful-purple-daisy-flower-isolated-on-white-background-vector.jpg"
-    image_url = "https://em-content.zobj.net/thumbs/240/apple/325/cherry-blossom_1f338.png"
+    image_url = "https://static.vecteezy.com/system/resources/previews/003/240/508/original/beautiful-purple-daisy-flower-isolated-on-white-background-vector.jpg"
+    # image_url = "https://em-content.zobj.net/thumbs/240/apple/325/cherry-blossom_1f338.png"
     nca.pool_training(load_image_from_url(image_url))
     nca.save()
