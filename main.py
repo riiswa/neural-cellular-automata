@@ -147,8 +147,8 @@ class NeuralCellularAutomata(nn.Module):
             with torch.no_grad():
                 max_idx = max(range(batch_size),
                               key=lambda x: 1-self.loss_fn(
-                                  batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).to(self.device),
-                                  target.transpose(0, 2).unsqueeze(0).to(self.device))
+                                  batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).clamp(0, 1).to(self.device),
+                                  target.transpose(0, 2).unsqueeze(0).clamp(0, 1).to(self.device))
                               )
             batch[max_idx] = seed.clone()
 
@@ -156,14 +156,14 @@ class NeuralCellularAutomata(nn.Module):
             state_grids = torch.stack(batch)
             outputs = self.update(state_grids.to(self.device))
             del state_grids
-            loss = 1-self.loss_fn(outputs[:, :, :, :4].transpose(1, 3), targets.transpose(1, 3))
+            loss = 1-self.loss_fn(outputs[:, :, :, :4].clamp(0, 1).transpose(1, 3), targets.transpose(1, 3))
             loss.backward(retain_graph=True)
             self.writer.add_scalar("Loss", loss.item(), i)
             self.optimizer.step()
             self.scheduler.step()
             outputs = outputs.cpu().detach()
             if i % monitoring_interval == 0:
-                plot_images(torch.clamp(outputs[:, :, :, :4], min=-0, max=1), self.writer, i, generate_filename(i))
+                plot_images(torch.clamp(outputs[:, :, :, :4], min=0, max=1), self.writer, i, generate_filename(i))
             for idx, output in zip(idxs, outputs):
                 pool[idx] = output.cpu().detach()
                 del output
