@@ -146,7 +146,7 @@ class NeuralCellularAutomata(nn.Module):
             with torch.no_grad():
                 max_idx = max(range(batch_size),
                               key=lambda x: self.loss_fn(
-                                  batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).clamp(0, 1).to(self.device),
+                                  batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).to(self.device),
                                   target.transpose(0, 2).unsqueeze(0).clamp(0, 1).to(self.device))
                               )
             batch[max_idx] = seed.clone()
@@ -155,7 +155,7 @@ class NeuralCellularAutomata(nn.Module):
             state_grids = torch.stack(batch)
             outputs = self.update(state_grids.to(self.device))
             del state_grids
-            loss = self.loss_fn(outputs[:, :, :, :4].clamp(0, 1).transpose(1, 3), targets.transpose(1, 3))
+            loss = self.loss_fn(outputs[:, :, :, :4].transpose(1, 3), targets.transpose(1, 3))
             loss.backward()
             self.writer.add_scalar("Loss", loss.item(), i)
             self.optimizer.step()
