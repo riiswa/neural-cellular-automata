@@ -103,7 +103,7 @@ class NeuralCellularAutomata(nn.Module):
         self.dense2 = nn.Linear(128, 16)
         self.dense2.weight.data.zero_()
 
-        self.loss_fn = SSIM(data_range=1, channel=4).to(self.device)
+        self.loss_fn = SSIM(data_range=1, channel=4, size_average=True, win_size=3).to(self.device)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=2e-3)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.5)
         self.to(self.device)
@@ -157,7 +157,7 @@ class NeuralCellularAutomata(nn.Module):
             outputs = self.update(state_grids.to(self.device))
             del state_grids
             loss = 1-self.loss_fn(outputs[:, :, :, :4].clamp(0, 1).transpose(1, 3), targets.transpose(1, 3))
-            loss.backward(retain_graph=True)
+            loss.backward()
             self.writer.add_scalar("Loss", loss.item(), i)
             self.optimizer.step()
             self.scheduler.step()
