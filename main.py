@@ -48,7 +48,6 @@ def plot_images(images, writer, step, filename, rows=None, cols=None, figsize=No
         ax.axis("off")
     plt.tight_layout()
     writer.add_figure("Batch images", fig, step)
-    plt.savefig(filename)
     plt.close()
 
 
@@ -69,16 +68,30 @@ def generate_filename(num, directory="imgs", prefix="img_", padding=5):  # Writt
     return filename
 
 
+def swap_positions(list, pos1, pos2):
+    list[pos1], list[pos2] = list[pos2], list[pos1]
+    return list
+
+
 def alive_masking(state_grid):
     alive = torch.nn.functional.max_pool2d(state_grid[:, 3:4, :, :], kernel_size=3, stride=1, padding=1) > 0.1
     state_grid = state_grid * alive.float()
     return state_grid
 
 
+def damage(image, radius):
+    height, width = image.shape[:2]
+    x_center = random.randint(0, width)
+    y_center = random.randint(0, height)
+    x, y = np.meshgrid(np.arange(width), np.arange(height))
+    mask = (x - x_center)**2 + (y - y_center)**2 <= radius**2
+    image[mask, ..., :3] = 1
+
+
 class NeuralCellularAutomata(nn.Module):
     def __init__(self):
         super(NeuralCellularAutomata, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
         self.writer = SummaryWriter()
 
         if not os.path.exists("imgs"):
@@ -103,7 +116,7 @@ class NeuralCellularAutomata(nn.Module):
         self.dense2.weight.data.zero_()
 
         self.loss_fn = nn.MSELoss().to(self.device)
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=2e-3)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=0.5)
         self.to(self.device)
 
@@ -132,7 +145,7 @@ class NeuralCellularAutomata(nn.Module):
             x = self.stochastic_update(x, ds)
         return x.transpose(1, 3)
 
-    def pool_training(self, target, epochs=10000, pool_size=1024, batch_size=9, monitoring_interval=50):
+    def pool_training(self, target, epochs=50000, pool_size=1024, batch_size=32, monitoring_interval=50):
         seed = torch.zeros(target.shape[0], target.shape[1], 16)
         seed[target.shape[0] // 2, target.shape[1] // 2, 3:] = 1
         pool = [seed.clone() for _ in range(pool_size)]
@@ -144,12 +157,18 @@ class NeuralCellularAutomata(nn.Module):
         for i in tqdm(range(epochs)):
             idxs, batch = sample()
             with torch.no_grad():
-                max_idx = max(range(batch_size),
-                              key=lambda x: self.loss_fn(
-                                  batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).to(self.device),
-                                  target.transpose(0, 2).unsqueeze(0).clamp(0, 1).to(self.device))
-                              )
-            batch[max_idx] = seed.clone()
+                sorted_idx = sorted(range(batch_size),
+                                    key=lambda x: self.loss_fn(
+                                        batch[x][:, :, :4].transpose(0, 2).unsqueeze(0).to(self.device),
+                                        target.transpose(0, 2).unsqueeze(0).clamp(0, 1).to(self.device)),
+                                    reverse=True
+                                    )
+            idxs = [idxs[i] for i in sorted_idx]
+            batch = [batch[i] for i in sorted_idx]
+            batch[0] = seed.clone()
+
+            for i in range(batch_size - int(round(batch_size * 0.2)), batch_size):
+                damage(batch[i], random.randint(batch[i].shape[0] // 12, batch[i].shape[0] // 5))
 
             self.optimizer.zero_grad()
             state_grids = torch.stack(batch)
@@ -171,6 +190,5 @@ class NeuralCellularAutomata(nn.Module):
 if __name__ == "__main__":
     nca = NeuralCellularAutomata()
     image_url = "https://static.vecteezy.com/system/resources/previews/003/240/508/original/beautiful-purple-daisy-flower-isolated-on-white-background-vector.jpg"
-    # image_url = "https://em-content.zobj.net/thumbs/240/apple/325/cherry-blossom_1f338.png"
     nca.pool_training(load_image_from_url(image_url))
     nca.save()
