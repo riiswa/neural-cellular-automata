@@ -145,7 +145,7 @@ class NeuralCellularAutomata(nn.Module):
             x = self.stochastic_update(x, ds)
         return x.transpose(1, 3)
 
-    def pool_training(self, target, epochs=50000, pool_size=1024, batch_size=32, monitoring_interval=50):
+    def pool_training(self, target, epochs=50000, pool_size=1024, batch_size=25, monitoring_interval=50):
         seed = torch.zeros(target.shape[0], target.shape[1], 16)
         seed[target.shape[0] // 2, target.shape[1] // 2, 3:] = 1
         pool = [seed.clone() for _ in range(pool_size)]
