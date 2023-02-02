@@ -168,7 +168,7 @@ class NeuralCellularAutomata(nn.Module):
             batch[0] = seed.clone()
 
             for j in range(batch_size - int(round(batch_size * 0.2)), batch_size):
-                damage(batch[j], random.randint(batch[i].shape[0] // 12, batch[j].shape[0] // 5))
+                damage(batch[j], random.randint(batch[j].shape[0] // 12, batch[j].shape[0] // 5))
 
             self.optimizer.zero_grad()
             state_grids = torch.stack(batch)
