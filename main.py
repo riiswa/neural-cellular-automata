@@ -182,6 +182,9 @@ class NeuralCellularAutomata(nn.Module):
             outputs = outputs.cpu().detach()
             if i % monitoring_interval == 0:
                 plot_images(torch.clamp(outputs[:, :, :, :4], min=0, max=1), self.writer, i, generate_filename(i))
+            if i % (monitoring_interval * 10) == 0:
+                print("Saving...")
+                self.save()
             for idx, output in zip(idxs, outputs):
                 pool[idx] = output.cpu().detach()
                 del output
