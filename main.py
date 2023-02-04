@@ -124,7 +124,7 @@ class NeuralCellularAutomata(nn.Module):
         torch.save(self.state_dict(), 'model_weights.pth')
 
     def load(self):
-        self.model.load_state_dict(torch.load('model_weights.pth'))
+        self.load_state_dict(torch.load('model_weights.pth', map_location=torch.device('cpu')))
 
     def stochastic_update(self, state_grid, ds_grid):
         rand_mask = (torch.rand((ds_grid.size(0), ds_grid.size(1), ds_grid.size(2), 1)) < 0.5).to(self.device).float()
@@ -138,11 +138,15 @@ class NeuralCellularAutomata(nn.Module):
         x = self.dense2(x)
         return x
 
-    def update(self, x, min_epochs=64, max_epochs=96):
+    def update(self, x, min_epochs=64, max_epochs=96, hook=None):
         x = x.transpose(1, 3)
+        if hook:
+            hook(x)
         for _ in range(random.randint(min_epochs, max_epochs)):
             ds = self(alive_masking(x))
             x = self.stochastic_update(x, ds)
+            if hook:
+                hook(x)
         return x.transpose(1, 3)
 
     def pool_training(self, target, epochs=50000, pool_size=1024, batch_size=25, monitoring_interval=50):
