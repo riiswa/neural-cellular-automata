@@ -54,10 +54,10 @@ The model was trained on a Tesla V4 for 6.30 hours.
 
 ![](random_result.gif)
 
-#### Running the cellular automata: From horizontal line
+#### Running the cellular automata: From vertical line
 
 ![](x_result.gif)
 
-#### Running the cellular automata: From vertical line
+#### Running the cellular automata: From horizontal line
 
 ![](y_result.gif)
